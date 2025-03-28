@@ -1,0 +1,19 @@
+django
+djangorestframework
+gtts
+# opencv-contrib-python>=4.2.0.34
+opencv-python
+cmake
+dlib
+moviepy
+numpy
+pillow
+phonemizer
+torch
+torchvision
+tqdm==4.45.0
+torchaudio
+ffmpeg-python
+scipy
+librosa
+# numba==0.48

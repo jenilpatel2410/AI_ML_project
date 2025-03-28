@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lip-Sync Generator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #f4f4f9;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      textarea,
+      input {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+      button {
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      #loader {
+        display: none;
+        font-size: 18px;
+        font-weight: bold;
+        color: #007bff;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Lip-Sync Generator</h1>
+      <input type="file" id="imageInput" accept="image/*" />
+      <textarea id="textInput" placeholder="Enter text..."></textarea>
+      <button onclick="generateLipSync()">Generate</button>
+      <p id="loader">Processing...</p>
+      <video
+        id="outputVideo"
+        controls
+        style="display: none; width: 100%"
+      ></video>
+    </div>
+
+    <script>
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          let cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.startsWith(name + "=")) {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      function generateLipSync() {
+        let image = document.getElementById("imageInput").files[0];
+        let text = document.getElementById("textInput").value;
+        let loader = document.getElementById("loader");
+
+        document.getElementById("outputVideo").style.display = "none";
+        document.getElementById("outputVideo").src = "";
+
+        if (!image || !text) {
+          alert("Please upload an image and enter text!");
+          return;
+        }
+
+        let formData = new FormData();
+        formData.append("image", image);
+        formData.append("text", text);
+
+        loader.style.display = "block";
+
+        fetch("/api/lip-sync/", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"), // Make sure to get CSRF token
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.video_url) {
+              document.getElementById("outputVideo").src = data.video_url;
+              document.getElementById("outputVideo").style.display = "block";
+            }
+            loader.style.display = "none";
+          });
+      }
+    </script>
+  </body>
+</html>
