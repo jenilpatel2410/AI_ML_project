@@ -104,12 +104,22 @@
             "X-CSRFToken": getCookie("csrftoken"), // Make sure to get CSRF token
           },
         })
-          .then((response) => response.json())
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to generate lip-sync. Please try again.");
+            }
+            return response.json();
+          })
           .then((data) => {
             if (data.video_url) {
               document.getElementById("outputVideo").src = data.video_url;
               document.getElementById("outputVideo").style.display = "block";
             }
+          })
+          .catch((error) => {
+            alert(error.message);
+          })
+          .finally(() => {
             loader.style.display = "none";
           });
       }

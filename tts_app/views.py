@@ -24,10 +24,10 @@ def text_to_speech(request):
             return JsonResponse({'error': 'Text is required'}, status=400)
 
         tts = gTTS(text=text, lang='en')  # Convert text to speech
-        file_path = os.path.join(settings.MEDIA_ROOT, 'speech.mp3')
+        file_path = os.path.join(settings.MEDIA_ROOT, 'tts_speech.mp3')
         tts.save(file_path)  # Save the speech file
 
-        return JsonResponse({'audio_url': settings.MEDIA_URL + 'speech.mp3'})
+        return JsonResponse({'audio_url': settings.MEDIA_URL + 'tts_speech.mp3'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

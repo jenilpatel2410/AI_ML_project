@@ -39,10 +39,11 @@ def generate_lip_sync_video(image_path, audio_path, output_video):
         "--checkpoint_path", os.path.join(WAV2LIP_DIR, "wav2lip_gan.pth"),
         "--face", temp_video,  # Provide video instead of image
         "--audio", audio_path,
-        "--outfile", output_video
+        "--outfile", output_video,
+        "--resize_factor", '1',
+        "--static", 'True',
     ]
 
-    print(command)
     process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     if process.returncode != 0:
