@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Text-to-Speech Converter</title>
+    <style>
+      /* Global Styling */
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #f4f4f9;
+        padding: 20px;
+      }
+
+      /* Container Box */
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+      }
+
+      /* Textarea Styling */
+      textarea {
+        width: 100%;
+        height: 120px;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        resize: none;
+      }
+
+      /* Convert Button */
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      /* Loader Styling */
+      #loader {
+        display: none;
+        font-size: 18px;
+        font-weight: bold;
+        color: #007bff;
+        margin-left: 10px;
+      }
+
+      /* Audio Player Styling */
+      audio {
+        margin-top: 20px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>AI Text-to-Speech Converter</h1>
+
+      <textarea
+        id="text-input"
+        placeholder="Enter your text here..."
+      ></textarea>
+      <br />
+      <button id="convert-btn" onclick="convertText()">Convert</button>
+      <span id="loader">🔄 Processing...</span>
+      <!-- Loader with icon -->
+
+      <br /><br />
+
+      <audio id="audio-player" controls style="display: none"></audio>
+      <!-- Audio player -->
+    </div>
+
+    <script>
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          let cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.startsWith(name + "=")) {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      function convertText() {
+        let text = document.getElementById("text-input").value;
+        let convertBtn = document.getElementById("convert-btn");
+        let loader = document.getElementById("loader");
+
+        if (!text.trim()) {
+          alert("Please enter some text.");
+          return;
+        }
+
+        // Disable button & show loader
+        convertBtn.disabled = true;
+        loader.style.display = "inline";
+
+        fetch("/api/tts/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify({ text: text }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.audio_url) {
+              let audioPlayer = document.getElementById("audio-player");
+              audioPlayer.src = data.audio_url;
+              audioPlayer.style.display = "block"; // Show audio player
+              audioPlayer.play(); // Auto-play audio
+            } else {
+              alert("Error: " + data.error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Failed to convert text. Please try again.");
+          })
+          .finally(() => {
+            // Re-enable button & hide loader
+            convertBtn.disabled = false;
+            loader.style.display = "none";
+          });
+      }
+    </script>
+  </body>
+</html>
