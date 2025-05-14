@@ -15,6 +15,12 @@ from gtts import gTTS
 #     CompositeVideoClip
 # )
 # from django.conf import settings
+# import pyttsx3
+import asyncio
+import random
+
+import edge_tts
+from edge_tts import VoicesManager
 
 
 # # Load dlib's face detector and landmark predictor
@@ -22,11 +28,76 @@ from gtts import gTTS
 # predictor = dlib.shape_predictor(os.path.join(settings.BASE_DIR, "shape_predictor_68_face_landmarks.dat"))
 
 
-def generate_audio(text, output_audio):
+async def generate_audio(text, output_audio, gender='female'):
     """Convert text to speech and save as an audio file."""
-    tts = gTTS(text=text, lang="en")
-    tts.save(output_audio)
+    # 1. Using gTTS (Google Text-to-Speech)
+    # tts = gTTS(text=text, lang="en")
+    # tts.save(output_audio)
+    # return output_audio
+
+    # 2. Using pyttsx3 (Offline TTS)
+    # engine = pyttsx3.init()
+
+    # # Find appropriate voice
+    # voices = engine.getProperty('voices')
+    # selected_voice = None
+
+    # for voice in voices:
+    #     print(f"Voice: {voice.name}, ID: {voice.id}")
+
+    #     if gender == 'male' and ('david' in voice.name.lower() or 'david' in voice.id.lower()):
+    #         selected_voice = voice.id
+    #         break
+    #     elif gender == 'female' and ('zira' in voice.name.lower() or 'zira' in voice.id.lower()):
+    #         selected_voice = voice.id
+    #         break
+
+    # if selected_voice:
+    #     engine.setProperty('voice', selected_voice)
+    # else:
+    #     print(f"No {gender} voice found. Using default voice.")  # Debugging line
+    #     # You can choose to either set a default voice or raise an exception
+    #     engine.setProperty('voice', voices[0].id)  # Fallback to the first available voice (default)
+
+    # engine.save_to_file(text, output_audio)
+    # engine.runAndWait()
+    
+    # return output_audio
+
+    # 3. Using edge_tts (Microsoft Edge TTS)
+    voices_manager = await edge_tts.VoicesManager.create()
+    voices = voices_manager.find(Gender=gender.capitalize(), Language="en")
+
+    if not voices:
+        raise ValueError(f"No voices found for gender '{gender}' and language 'en-US'")
+
+    # Select a random voice from the matching voices
+    selected_voice = random.choice(voices)["Name"]
+
+    # Create communicator
+    communicate = edge_tts.Communicate(text=text, voice=selected_voice)
+
+    # Save the audio output
+    await communicate.save(output_audio)
+
     return output_audio
+
+
+from deepface import DeepFace
+
+def detect_gender(photo_path):
+    objs = DeepFace.analyze(
+        img_path = photo_path, actions = ['gender']
+    )
+    dominant_gender = objs[0]['dominant_gender'].lower()
+
+    # Normalize to "male" or "female"
+    if dominant_gender == 'man':
+        return 'male'
+    elif dominant_gender == 'woman':
+        return 'female'
+    else:
+        return 'unknown'
 
 # def get_mouth_landmarks(image_path):
 #     """Detect facial landmarks and return the mouth region points along with the image."""

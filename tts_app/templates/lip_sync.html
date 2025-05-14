@@ -6,9 +6,11 @@
     <title>Lip-Sync Generator</title>
     <style>
       body {
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         text-align: center;
         background: #f4f4f9;
+        margin: 0;
+        padding: 40px 20px;
       }
       .container {
         max-width: 600px;
@@ -27,15 +29,22 @@
         border: 1px solid #ccc;
       }
       button {
-        padding: 10px 20px;
         background: #007bff;
         color: white;
         border: none;
+        padding: 12px 20px;
+        font-size: 16px;
         border-radius: 5px;
         cursor: pointer;
+        margin-top: 10px;
+        transition: 0.3s;
       }
       button:hover {
         background: #0056b3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
       }
       #loader {
         display: none;
@@ -44,84 +53,160 @@
         color: #007bff;
         margin-top: 10px;
       }
+      .home {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-family: inherit;
+      }
+      
+      .home:hover {
+        background-color: #5a6268;
+      }
+      label {
+        text-align: left;
+        display: block;
+        margin-top: 15px;
+        font-weight: 600;
+        color: #555;
+      }
+      audio {
+        margin-top: 20px;
+        width: 100%;
+      }
+      select {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        background-color: #fff;
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23007bff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22feather%20feather-chevron-down%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E');
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+      }
     </style>
   </head>
   <body>
+    {% include "logout_header.html" %}
     <div class="container">
       <h1>Lip-Sync Generator</h1>
+      <label>Upload an Image:</label>
       <input type="file" id="imageInput" accept="image/*" />
+      <label>Text to Synthesize:</label>
       <textarea id="textInput" placeholder="Enter text..."></textarea>
-      <button onclick="generateLipSync()">Generate</button>
+      <label for="voiceSelect">Select Cloned Persona:</label>
+      <select id="voiceSelect">
+        <option value="">-- Select a voice --</option>
+        {% for voice in cloned_voices %}
+          <option value="{{ voice.id }}" data-audio-url="{{ voice.cloned_audio.url }}">
+            {% comment %} Voice {{ forloop.counter }} ({{ voice.created_at|date:"Y-m-d H:i" }}) {% endcomment %}
+            {{ voice.original_audio.url }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="voicePreview" id="voicePreview1" style="display: none;">Preview Cloned Voice:</label>
+      <audio id="voicePreview" controls style="display:none; margin-top:10px;"></audio>
+      <button id="convert-btn" onclick="generateLipSync()">Generate</button>
       <p id="loader">Processing...</p>
-      <video
-        id="outputVideo"
-        controls
-        style="display: none; width: 100%"
-      ></video>
+      <video id="outputVideo" controls style="display: none; width: 100%"></video>
+      <br/>
+      <a href="/" class="home">Back to Home</a>
     </div>
 
     <script>
       function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-          let cookies = document.cookie.split(";");
+        let cookieValue = null
+        if (document.cookie && document.cookie !== '') {
+          let cookies = document.cookie.split(';')
           for (let i = 0; i < cookies.length; i++) {
-            let cookie = cookies[i].trim();
-            if (cookie.startsWith(name + "=")) {
-              cookieValue = decodeURIComponent(
-                cookie.substring(name.length + 1)
-              );
-              break;
+            let cookie = cookies[i].trim()
+            if (cookie.startsWith(name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
+              break
             }
           }
         }
-        return cookieValue;
+        return cookieValue
       }
+      
+      document.getElementById("voiceSelect").addEventListener("change", function () {
+        const audio = document.getElementById("voicePreview");
+        const label = document.getElementById("voicePreview1");
+        const selected = this.options[this.selectedIndex];
+        const url = selected.getAttribute("data-audio-url");
+        if (url) {
+          audio.src = url;
+          audio.style.display = "block";
+          label.style.display = "block";
+        } else {
+          audio.src = "";
+          audio.style.display = "none";
+          label.style.display = "none";
+        }
+      });
 
       function generateLipSync() {
-        let image = document.getElementById("imageInput").files[0];
-        let text = document.getElementById("textInput").value;
-        let loader = document.getElementById("loader");
-
-        document.getElementById("outputVideo").style.display = "none";
-        document.getElementById("outputVideo").src = "";
-
+        let image = document.getElementById('imageInput').files[0]
+        let text = document.getElementById('textInput').value
+        let voiceId = document.getElementById("voiceSelect").value;
+        let convertBtn = document.getElementById('convert-btn')
+        let loader = document.getElementById('loader')
+      
+        document.getElementById('outputVideo').style.display = 'none'
+        document.getElementById('outputVideo').src = ''
+      
         if (!image || !text) {
-          alert("Please upload an image and enter text!");
-          return;
+          alert('Please upload an image and enter text!')
+          return
         }
+      
+        let formData = new FormData()
+        formData.append('image', image)
+        formData.append('text', text)
+        formData.append('voice_id', voiceId);
 
-        let formData = new FormData();
-        formData.append("image", image);
-        formData.append("text", text);
-
-        loader.style.display = "block";
-
-        fetch("/api/lip-sync/", {
-          method: "POST",
+      
+        convertBtn.disabled = true
+        loader.style.display = 'block'
+      
+        fetch('/api/lip-sync/', {
+          method: 'POST',
           body: formData,
           headers: {
-            "X-CSRFToken": getCookie("csrftoken"), // Make sure to get CSRF token
-          },
+            'X-CSRFToken': getCookie('csrftoken') // Make sure to get CSRF token
+          }
         })
           .then((response) => {
             if (!response.ok) {
-              throw new Error("Failed to generate lip-sync. Please try again.");
+              throw new Error('Failed to generate lip-sync. Please try again.')
             }
-            return response.json();
+            return response.json()
           })
           .then((data) => {
             if (data.video_url) {
-              document.getElementById("outputVideo").src = data.video_url;
-              document.getElementById("outputVideo").style.display = "block";
+              document.getElementById('outputVideo').src = data.video_url
+              document.getElementById('outputVideo').style.display = 'block'
             }
           })
           .catch((error) => {
-            alert(error.message);
+            alert(error.message)
           })
           .finally(() => {
-            loader.style.display = "none";
-          });
+            convertBtn.disabled = false
+            loader.style.display = 'none'
+          })
       }
     </script>
   </body>

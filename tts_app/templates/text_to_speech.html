@@ -7,10 +7,11 @@
     <style>
       /* Global Styling */
       body {
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         text-align: center;
         background: #f4f4f9;
-        padding: 20px;
+        margin: 0;
+        padding: 40px 20px;
       }
 
       /* Container Box */
@@ -50,16 +51,16 @@
         margin-top: 10px;
         transition: 0.3s;
       }
-
+      
       button:hover {
         background: #0056b3;
       }
-
+      
       button:disabled {
         background: #ccc;
         cursor: not-allowed;
       }
-
+      
       /* Loader Styling */
       #loader {
         display: none;
@@ -68,93 +69,135 @@
         color: #007bff;
         margin-left: 10px;
       }
-
+      
       /* Audio Player Styling */
       audio {
         margin-top: 20px;
         width: 100%;
       }
+      
+      select {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        background-color: #fff;
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23007bff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22feather%20feather-chevron-down%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E');
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+      }
+      
+      .home {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-family: inherit;
+      }
+      
+      .home:hover {
+        background-color: #5a6268;
+      }
     </style>
   </head>
   <body>
+    {% include "logout_header.html" %}
+    
     <div class="container">
       <h1>AI Text-to-Speech Converter</h1>
 
-      <textarea
-        id="text-input"
-        placeholder="Enter your text here..."
-      ></textarea>
+      <textarea id="text-input" placeholder="Enter your text here..."></textarea>
+      <select id="gender">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
       <br />
       <button id="convert-btn" onclick="convertText()">Convert</button>
       <span id="loader">🔄 Processing...</span>
       <!-- Loader with icon -->
 
-      <br /><br />
+      <br />
 
       <audio id="audio-player" controls style="display: none"></audio>
+      <a href="/" class="home">Back to Home</a>
+
       <!-- Audio player -->
     </div>
 
     <script>
       function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-          let cookies = document.cookie.split(";");
+        let cookieValue = null
+        if (document.cookie && document.cookie !== '') {
+          let cookies = document.cookie.split(';')
           for (let i = 0; i < cookies.length; i++) {
-            let cookie = cookies[i].trim();
-            if (cookie.startsWith(name + "=")) {
-              cookieValue = decodeURIComponent(
-                cookie.substring(name.length + 1)
-              );
-              break;
+            let cookie = cookies[i].trim()
+            if (cookie.startsWith(name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
+              break
             }
           }
         }
-        return cookieValue;
+        return cookieValue
       }
-
+      
       function convertText() {
-        let text = document.getElementById("text-input").value;
-        let convertBtn = document.getElementById("convert-btn");
-        let loader = document.getElementById("loader");
-
+        let text = document.getElementById('text-input').value
+        let gender = document.getElementById('gender').value
+        let convertBtn = document.getElementById('convert-btn')
+        let loader = document.getElementById('loader')
+        let audioPlayer = document.getElementById('audio-player')
+      
         if (!text.trim()) {
-          alert("Please enter some text.");
-          return;
+          alert('Please enter some text.')
+          return
         }
-
+      
         // Disable button & show loader
-        convertBtn.disabled = true;
-        loader.style.display = "inline";
-
-        fetch("/api/tts/", {
-          method: "POST",
+        audioPlayer.style.display = 'none' // Hide audio player
+        convertBtn.disabled = true
+        loader.style.display = 'inline'
+      
+        fetch('/api/tts/', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
           },
-          body: JSON.stringify({ text: text }),
+          body: JSON.stringify({
+            text: text,
+            gender: gender
+          })
         })
           .then((response) => response.json())
           .then((data) => {
             if (data.audio_url) {
-              let audioPlayer = document.getElementById("audio-player");
-              audioPlayer.src = data.audio_url;
-              audioPlayer.style.display = "block"; // Show audio player
-              audioPlayer.play(); // Auto-play audio
+              let audioPlayer = document.getElementById('audio-player')
+              audioPlayer.src = data.audio_url
+              audioPlayer.style.display = 'block' // Show audio player
+              audioPlayer.play() // Auto-play audio
             } else {
-              alert("Error: " + data.error);
+              alert('Error: ' + data.error)
             }
           })
           .catch((error) => {
-            console.error("Error:", error);
-            alert("Failed to convert text. Please try again.");
+            console.error('Error:', error)
+            alert('Failed to convert text. Please try again.')
           })
           .finally(() => {
             // Re-enable button & hide loader
-            convertBtn.disabled = false;
-            loader.style.display = "none";
-          });
+            convertBtn.disabled = false
+            loader.style.display = 'none'
+          })
       }
     </script>
   </body>

@@ -28,12 +28,16 @@ def create_video_from_image(image_path, audio_path, output_video, fps=25):
     return output_video
 
 
-def generate_lip_sync_video(image_path, audio_path, output_video):
+def generate_lip_sync_video(image_path, audio_path, output_video, unique_id=None):
     """Generates a lip-sync video using Wav2Lip."""
     base_dir = settings.BASE_DIR
     
+    if not unique_id:
+        import uuid
+        unique_id = str(uuid.uuid4()).split('-')[0]
+        
     # Convert image into a video
-    temp_video = os.path.join(os.path.dirname(output_video), "temp_video.mp4")
+    temp_video = os.path.join(os.path.dirname(output_video), f"temp_{unique_id}.mp4")
     create_video_from_image(image_path, audio_path, temp_video)
 
     command = [
@@ -49,7 +53,9 @@ def generate_lip_sync_video(image_path, audio_path, output_video):
     
     process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
-    if process.returncode != 0:
+    if process.returncode == 0:
+        if os.path.exists(temp_video):
+            os.remove(temp_video)
+        return output_video
+    else:
         raise Exception(f"Wav2Lip Error: {process.stderr.decode()}")
-
-    return output_video

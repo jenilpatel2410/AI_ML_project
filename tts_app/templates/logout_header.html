@@ -1,0 +1,36 @@
+<!-- templates/partials/logout_header.html -->
+<style>
+  .top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    z-index: 10;
+  }
+
+  .username {
+    color: #333;
+    font-weight: bold;
+  }
+
+  .logout-btn {
+    background-color: #dc3545;
+    color: white;
+    padding: 8px 12px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+  }
+
+  .logout-btn:hover {
+    background-color: #c82333;
+  }
+</style>
+
+<div class="top-right">
+  <span class="username">{{ user.username }} ({{ user.email }})</span>
+  <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+</div>
