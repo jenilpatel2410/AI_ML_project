@@ -13,7 +13,7 @@
         margin: 0;
         padding: 40px 20px;
       }
-
+      
       /* Container Box */
       .container {
         max-width: 600px;
@@ -23,22 +23,21 @@
         border-radius: 10px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
-
+      
       h1 {
         color: #333;
       }
-
+      
       /* Textarea Styling */
       textarea {
         width: 100%;
         height: 120px;
         padding: 10px;
-        font-size: 16px;
-        border: 1px solid #ccc;
+        margin-top: 10px;
         border-radius: 5px;
-        resize: none;
+        border: 1px solid #ccc;
       }
-
+      
       /* Convert Button */
       button {
         background: #007bff;
@@ -76,6 +75,14 @@
         width: 100%;
       }
       
+      label {
+        text-align: left;
+        display: block;
+        margin-top: 15px;
+        font-weight: 600;
+        color: #555;
+      }
+      
       select {
         width: 100%;
         padding: 10px;
@@ -111,16 +118,24 @@
     </style>
   </head>
   <body>
-    {% include "logout_header.html" %}
-    
+    {% include 'logout_header.html' %}
+
     <div class="container">
       <h1>AI Text-to-Speech Converter</h1>
 
+      <label>Text to Convert:</label>
       <textarea id="text-input" placeholder="Enter your text here..."></textarea>
+      <label>Select Language:</label>
+      <select id="language"></select>
+      <label>Select Gender:</label>
       <select id="gender">
         <option value="male">Male</option>
         <option value="female">Female</option>
       </select>
+      <label for="voice-select" id="voice-select1" style="display: none;">Select Voice:</label>
+      <select id="voice-select" style="display: none;"></select>
+      <button id="preview-btn" onclick="previewVoice()" style="display: none;">🔊 Preview Voice</button>
+      <audio id="preview-audio-player" controls style="display: none"></audio>
       <br />
       <button id="convert-btn" onclick="convertText()">Convert</button>
       <span id="loader">🔄 Processing...</span>
@@ -128,6 +143,7 @@
 
       <br />
 
+      <label id="final-ot" style="display: none">Converted Audio:</label>
       <audio id="audio-player" controls style="display: none"></audio>
       <a href="/" class="home">Back to Home</a>
 
@@ -150,12 +166,121 @@
         return cookieValue
       }
       
+      document.addEventListener('DOMContentLoaded', function () {
+        loadLanguages()
+      
+        document.getElementById('language').addEventListener('change', () => {
+          const language = document.getElementById('language').value
+          if (language) {
+            document.getElementById('gender').disabled = false
+            loadVoices() // Trigger voices if gender is already picked
+          }
+        })
+      
+        document.getElementById('gender').addEventListener('change', loadVoices)
+      
+        const voiceSelect = document.getElementById('voice-select')
+        voiceSelect.addEventListener('change', function () {
+          const selectedOption = this.options[this.selectedIndex]
+          const audioUrl = selectedOption.getAttribute('data-audio-url')
+          if (audioUrl) {
+            document.getElementById('preview-btn').style.display = 'inline-block'
+          }
+        })
+      })
+      
+      function loadLanguages() {
+        fetch('/api/languages/')
+          .then((res) => res.json())
+          .then((languages) => {
+            const langSelect = document.getElementById('language')
+            langSelect.innerHTML = `<option value="">Select Language</option>`
+      
+            languages.forEach((lang) => {
+              const option = document.createElement('option')
+              option.value = lang.code
+              option.textContent = lang.name
+              langSelect.appendChild(option)
+            })
+      
+            // ✅ Set default to "en-US"
+            langSelect.value = 'en-US'
+      
+            // ✅ Manually trigger change event if needed
+            langSelect.dispatchEvent(new Event('change'))
+          })
+      }
+      
+      function loadVoices() {
+        const language = document.getElementById('language').value
+        const gender = document.getElementById('gender').value
+      
+        if (!language || !gender) return
+      
+        fetch(`/api/voices/?language=${language}&gender=${gender}`)
+          .then((res) => res.json())
+          .then((voices) => {
+            const voiceSelect = document.getElementById('voice-select')
+            voiceSelect.innerHTML = ''
+            voices.forEach((v) => {
+              const option = document.createElement('option')
+              option.value = v.short_name
+              option.textContent = v.name
+              voiceSelect.appendChild(option)
+            })
+            voiceSelect.style.display = 'inline-block'
+            document.getElementById('preview-btn').style.display = 'inline-block'
+            document.getElementById('voice-select1').style.display = 'block'
+          })
+      }
+      
+      function previewVoice() {
+        let voice = document.getElementById('voice-select').value
+        let language = document.getElementById('language').value // also pass language
+        const previewBtn = document.getElementById('preview-btn')
+        const audioPlayer = document.getElementById('preview-audio-player')
+      
+        if (!voice) return
+      
+        // Disable the button and show "Loading..."
+        previewBtn.disabled = true
+        previewBtn.textContent = '🔄 Previewing...'
+      
+        fetch('/api/tts-preview/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({ voice: voice, language: language })
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error('Failed to generate preview')
+            return res.blob()
+          })
+          .then((blob) => {
+            audioPlayer.src = URL.createObjectURL(blob)
+            audioPlayer.style.display = 'block'
+            audioPlayer.play()
+          })
+          .catch((err) => {
+            alert('Error generating preview: ' + err.message)
+          })
+          .finally(() => {
+            // Re-enable the button
+            previewBtn.disabled = false
+            previewBtn.textContent = '🔊 Preview Voice'
+          })
+      }
+      
       function convertText() {
         let text = document.getElementById('text-input').value
         let gender = document.getElementById('gender').value
+        let voiceSelect = document.getElementById('voice-select')
         let convertBtn = document.getElementById('convert-btn')
         let loader = document.getElementById('loader')
         let audioPlayer = document.getElementById('audio-player')
+        let label = document.getElementById('final-ot')
       
         if (!text.trim()) {
           alert('Please enter some text.')
@@ -166,6 +291,7 @@
         audioPlayer.style.display = 'none' // Hide audio player
         convertBtn.disabled = true
         loader.style.display = 'inline'
+        label.style.display = 'none' // Hide label
       
         fetch('/api/tts/', {
           method: 'POST',
@@ -175,7 +301,8 @@
           },
           body: JSON.stringify({
             text: text,
-            gender: gender
+            gender: gender,
+            voice_id: voiceSelect.value
           })
         })
           .then((response) => response.json())
@@ -185,6 +312,9 @@
               audioPlayer.src = data.audio_url
               audioPlayer.style.display = 'block' // Show audio player
               audioPlayer.play() // Auto-play audio
+      
+              label = document.getElementById('final-ot')
+              label.style.display = 'block'
             } else {
               alert('Error: ' + data.error)
             }

@@ -21,6 +21,12 @@ import random
 
 import edge_tts
 from edge_tts import VoicesManager
+import os
+from django.http import JsonResponse, HttpResponse
+import uuid
+import json
+from django.views.decorators.csrf import csrf_exempt
+import tempfile
 
 
 # # Load dlib's face detector and landmark predictor
@@ -28,7 +34,7 @@ from edge_tts import VoicesManager
 # predictor = dlib.shape_predictor(os.path.join(settings.BASE_DIR, "shape_predictor_68_face_landmarks.dat"))
 
 
-async def generate_audio(text, output_audio, gender='female'):
+async def generate_audio(text, output_audio, gender='female', voice_id=None):
     """Convert text to speech and save as an audio file."""
     # 1. Using gTTS (Google Text-to-Speech)
     # tts = gTTS(text=text, lang="en")
@@ -65,14 +71,20 @@ async def generate_audio(text, output_audio, gender='female'):
     # return output_audio
 
     # 3. Using edge_tts (Microsoft Edge TTS)
-    voices_manager = await edge_tts.VoicesManager.create()
-    voices = voices_manager.find(Gender=gender.capitalize(), Language="en")
+    if voice_id:
+        # If a specific voice ID is provided, use it
+        selected_voice = voice_id
+    
+    else:
+        # If no voice ID is provided, find a voice based
+        voices_manager = await edge_tts.VoicesManager.create()
+        voices = voices_manager.find(Gender=gender.capitalize(), Language="en")
 
-    if not voices:
-        raise ValueError(f"No voices found for gender '{gender}' and language 'en-US'")
+        if not voices:
+            raise ValueError(f"No voices found for gender '{gender}' and language 'en-US'")
 
-    # Select a random voice from the matching voices
-    selected_voice = random.choice(voices)["Name"]
+        # Select a random voice from the matching voices
+        selected_voice = random.choice(voices)["Name"]
 
     # Create communicator
     communicate = edge_tts.Communicate(text=text, voice=selected_voice)
@@ -81,6 +93,52 @@ async def generate_audio(text, output_audio, gender='female'):
     await communicate.save(output_audio)
 
     return output_audio
+
+from deep_translator import GoogleTranslator
+
+def translate_preview(text, target_lang):
+    try:
+        target_lang = target_lang.split("-")[0].lower()
+        translated_text = GoogleTranslator(source='en', target=target_lang).translate(text)
+        return translated_text
+    except Exception as e:
+        print(f"[Translation error] {e}")
+        return text  # fallback to original text in case of an error
+
+
+@csrf_exempt
+async def generate_voice_preview(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        voice = data["voice"]
+        language = data.get("language", "en-US")
+        text = "The quick brown fox jumped over the lazy dog while the rain started to fall."
+
+        translated_text = translate_preview(text, language)
+        
+        # Create a temp file path (not open)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+            temp_filename = tmp.name
+
+        # Use edge-tts to write to that path
+        communicate = edge_tts.Communicate(text=translated_text, voice=voice)
+        await communicate.save(temp_filename)
+
+        # Read file contents into memory
+        with open(temp_filename, "rb") as f:
+            audio_data = f.read()
+
+        # Delete the file afterward
+        os.remove(temp_filename)
+
+        return HttpResponse(audio_data, content_type="audio/mpeg")
+
+    except Exception as e:
+        print(f"Error generating voice preview: {e}")  # Debugging line
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 from deepface import DeepFace

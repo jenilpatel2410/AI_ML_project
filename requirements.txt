@@ -1,27 +1,7 @@
-django==5.1.7
-djangorestframework==3.15.2
-gtts==2.5.4
-# opencv-contrib-python>=4.2.0.34
-opencv-python==4.11.0.86
-cmake==3.31.6
-# dlib==19.24.6
-# moviepy
+# requirements.txt
+
+# Install numpy first to avoid issues with lws
 numpy==1.26.4
-pillow==10.4.0
-# phonemizer
-torch==2.6.0
-torchvision==0.21.0
-tqdm==4.45.0
-torchaudio==2.6.0
-ffmpeg-python==0.2.0
-scipy==1.11.4
-librosa==0.9.1
-lws==1.2.8
-# TTS
-deepface==0.0.93
-tf-keras==2.19.0
-edge-tts==7.0.2
-# pyttsx3==2.98
 
-
-# tts==0.22.0
+# Then install everything else
+-r requirements-base.txt

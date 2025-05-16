@@ -17,6 +17,8 @@ from .models import ClonedVoice
 from TTS.api import TTS
 import uuid, torch, asyncio
 from .tts_singleton import tts
+import edge_tts
+
 
 @login_required
 def index(request):
@@ -63,6 +65,7 @@ def text_to_speech(request):
             return JsonResponse({'error': 'Text is required'}, status=400)
 
         gender = request.data.get('gender', 'female')
+        voice_select = request.data.get('voice_id', None)
         
         output_dir = os.path.join(settings.MEDIA_ROOT, 'texttospeech')
         os.makedirs(output_dir, exist_ok=True)
@@ -73,13 +76,47 @@ def text_to_speech(request):
         file_path = os.path.join(output_dir, filename)
         # tts.save(file_path)  # Save the speech file
 
-        asyncio.run(generate_audio(text, file_path, gender=gender))
+        asyncio.run(generate_audio(text, file_path, gender=gender, voice_id=voice_select))
 
         audio_url = settings.MEDIA_URL + f'texttospeech/{filename}'
         return JsonResponse({'audio_url': audio_url})
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+from babel import Locale
+
+def get_language_name(locale_code):
+    try:
+        lang, country = locale_code.split("-")
+        return Locale(lang, country).get_display_name("en").title()
+    except Exception:
+        return locale_code  # fallback
+
+# @csrf_exempt
+async def get_languages(request):
+    voices_manager = await edge_tts.VoicesManager.create()
+    voices = voices_manager.voices
+    languages = sorted(set(v["Locale"] for v in voices))
+    language_data = [{"code": lang, "name": get_language_name(lang)} for lang in languages]
+    return JsonResponse(language_data, safe=False)
+
+async def get_voices(request):
+    language = request.GET.get("language", "en-US")
+    gender = request.GET.get('gender', 'female')
+    
+    if not language or not gender:
+        return JsonResponse({"error": "Missing language or gender"}, status=400)
+    
+    voices_manager = await edge_tts.VoicesManager.create()
+    voices = voices_manager.find(Locale=language, Gender=gender.capitalize())
+        
+    # Return name and short name
+    return JsonResponse([
+        {"name": v["FriendlyName"], "short_name": v["ShortName"]}
+        for v in voices
+    ], safe=False)
+
 
 
 
