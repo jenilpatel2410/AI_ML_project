@@ -101,7 +101,7 @@ def get_languages(request):
         import asyncio
         logger.info("Fetching languages from edge_tts.VoicesManager")
         logger.info("About to call VoicesManager.create()")
-        voices_manager = asyncio.run(asyncio.wait_for(get_voices(), timeout=10))
+        voices_manager = asyncio.run(edge_tts.VoicesManager.create())
         logger.info("VoicesManager created successfully")
         voices = voices_manager.voices
         logger.info(f"Found {len(voices)} voices")
