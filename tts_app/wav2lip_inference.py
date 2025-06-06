@@ -4,6 +4,9 @@ from django.conf import settings
 import cv2
 import librosa
 from django.conf import settings
+import sys
+
+python_executable = sys.executable
 
 WAV2LIP_DIR = os.path.join(settings.BASE_DIR, "Wav2Lip")
 
@@ -41,7 +44,7 @@ def generate_lip_sync_video(image_path, audio_path, output_video, unique_id=None
     create_video_from_image(image_path, audio_path, temp_video)
 
     command = [
-        os.path.join(base_dir, "venv", "Scripts", "python.exe"),
+        python_executable,
         os.path.join(WAV2LIP_DIR, "inference.py"),
         "--checkpoint_path", os.path.join(WAV2LIP_DIR, "wav2lip_gan.pth"),
         "--face", temp_video,  # Provide video instead of image
