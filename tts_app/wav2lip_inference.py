@@ -5,6 +5,9 @@ import cv2
 import librosa
 from django.conf import settings
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 python_executable = sys.executable
 
@@ -54,11 +57,13 @@ def generate_lip_sync_video(image_path, audio_path, output_video, unique_id=None
         "--static", 'True',
     ]
     
+    logger.info(f"Running Wav2Lip command: {' '.join(command)}")
+    
     process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     if process.returncode == 0:
-        if os.path.exists(temp_video):
-            os.remove(temp_video)
+        # if os.path.exists(temp_video):
+        #     os.remove(temp_video)
         return output_video
     else:
         raise Exception(f"Wav2Lip Error: {process.stderr.decode()}")

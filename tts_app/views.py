@@ -184,6 +184,7 @@ def lip_sync_api(request):
 
     tts.tts_to_file(text=text, speaker_wav=voice_record.original_audio, language=voice_record.language, file_path=audio_path)
     print('Audio generated')
+    logger.info(f"Audio generated at {audio_path}")
     # Generate lip-sync video using Wav2Lip
     output_video_filename = f"output_video_{image_unique_id}.mp4"
     output_video_path = os.path.join(settings.MEDIA_ROOT, "videos", output_video_filename)
