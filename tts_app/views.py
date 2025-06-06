@@ -19,6 +19,7 @@ import uuid, torch, asyncio
 from .tts_singleton import tts
 import edge_tts
 import logging
+from .tts_cache import load_voices_manager
 
 logger = logging.getLogger(__name__)
 
@@ -95,61 +96,40 @@ def get_language_name(locale_code):
     except Exception:
         return locale_code  # fallback
 
-# @csrf_exempt
-def get_languages(request):
-    import asyncio
-    import edge_tts
 
-    logger.info("Starting get_languages")
-
-    async def get_voices():
-        try:
-            logger.info("Calling VoicesManager.create()")
-            manager = await edge_tts.VoicesManager.create()
-            logger.info("Successfully created VoicesManager")
-            return manager
-        except Exception as e:
-            logger.error("Async error during VoicesManager.create: %s", e, exc_info=True)
-            raise
-
+async def get_languages(request):
     try:
-        voices_manager = asyncio.run(asyncio.wait_for(get_voices(), timeout=10))
-        logger.info("Returned from asyncio.run")
-
+        voices_manager = await load_voices_manager()
         voices = voices_manager.voices
-        logger.info(f"Found {len(voices)} voices")
-
         languages = sorted(set(v["Locale"] for v in voices))
-        logger.info(f"Extracted {len(languages)} unique languages")
-
-        language_data = [{"code": lang, "name": get_language_name(lang)} for lang in languages]
-        logger.info("Language data prepared for response")
-
+        language_data = [
+            {"code": lang, "name": get_language_name(lang)}
+            for lang in languages
+        ]
         return JsonResponse(language_data, safe=False)
-
-    except asyncio.TimeoutError:
-        logger.error("Timed out while fetching voices from edge_tts")
-        return JsonResponse({"error": "Timeout from edge_tts"}, status=504)
-
     except Exception as e:
-        logger.error("General error in get_languages: %s", e, exc_info=True)
+        logger.error("Error in get_languages: %s", e, exc_info=True)
         return JsonResponse({"error": "Internal Server Error"}, status=500)
+
 
 async def get_voices(request):
     language = request.GET.get("language", "en-US")
     gender = request.GET.get('gender', 'female')
-    
+
     if not language or not gender:
         return JsonResponse({"error": "Missing language or gender"}, status=400)
-    
-    voices_manager = await edge_tts.VoicesManager.create()
-    voices = voices_manager.find(Locale=language, Gender=gender.capitalize())
-        
-    # Return name and short name
-    return JsonResponse([
-        {"name": v["FriendlyName"], "short_name": v["ShortName"]}
-        for v in voices
-    ], safe=False)
+
+    try:
+        voices_manager = await load_voices_manager()
+        voices = voices_manager.find(Locale=language, Gender=gender.capitalize())
+
+        return JsonResponse([
+            {"name": v["FriendlyName"], "short_name": v["ShortName"]}
+            for v in voices
+        ], safe=False)
+    except Exception as e:
+        logger.error("Error in get_voices: %s", e, exc_info=True)
+        return JsonResponse({"error": "Internal Server Error"}, status=500)
 
 
 

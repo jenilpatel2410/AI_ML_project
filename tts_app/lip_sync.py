@@ -27,6 +27,7 @@ import uuid
 import json
 from django.views.decorators.csrf import csrf_exempt
 import tempfile
+from .tts_cache import load_voices_manager
 
 
 # # Load dlib's face detector and landmark predictor
@@ -77,7 +78,7 @@ async def generate_audio(text, output_audio, gender='female', voice_id=None):
     
     else:
         # If no voice ID is provided, find a voice based
-        voices_manager = await edge_tts.VoicesManager.create()
+        voices_manager = await load_voices_manager()
         voices = voices_manager.find(Gender=gender.capitalize(), Language="en")
 
         if not voices:

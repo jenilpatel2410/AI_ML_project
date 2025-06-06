@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from .tts_cache import preload_voices_manager
 
 class TtsAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -21,3 +22,5 @@ class TtsAppConfig(AppConfig):
 
         from . import tts_singleton
         tts_singleton.tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False).to(device)
+
+        preload_voices_manager()
