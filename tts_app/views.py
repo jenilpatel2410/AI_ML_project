@@ -18,7 +18,9 @@ from TTS.api import TTS
 import uuid, torch, asyncio
 from .tts_singleton import tts
 import edge_tts
+import logging
 
+logger = logging.getLogger(__name__)
 
 @login_required
 def index(request):
@@ -94,12 +96,23 @@ def get_language_name(locale_code):
         return locale_code  # fallback
 
 # @csrf_exempt
-async def get_languages(request):
-    voices_manager = await edge_tts.VoicesManager.create()
-    voices = voices_manager.voices
-    languages = sorted(set(v["Locale"] for v in voices))
-    language_data = [{"code": lang, "name": get_language_name(lang)} for lang in languages]
-    return JsonResponse(language_data, safe=False)
+def get_languages(request):
+    try:
+        import asyncio
+        print("Starting get_languages")
+        logger.info("Fetching languages from edge_tts.VoicesManager")
+        voices_manager = asyncio.run(edge_tts.VoicesManager.create())
+        logger.info("VoicesManager created successfully")
+        voices = voices_manager.voices
+        logger.info(f"Found {len(voices)} voices")
+        languages = sorted(set(v["Locale"] for v in voices))
+        logger.info(f"Extracted {len(languages)} unique languages")
+        language_data = [{"code": lang, "name": get_language_name(lang)} for lang in languages]
+        logger.info("Language data prepared for response")
+        return JsonResponse(language_data, safe=False)
+    except Exception as e:
+        logger.error("Error in get_languages: %s", e, exc_info=True)
+        return JsonResponse({"error": "Internal Server Error"}, status=500)
 
 async def get_voices(request):
     language = request.GET.get("language", "en-US")
