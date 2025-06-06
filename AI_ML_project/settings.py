@@ -185,3 +185,6 @@ LOGGING = {
         },
     },
 }
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB (default is ~2.5MB if unset)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600    # 2.5 MB (default)
