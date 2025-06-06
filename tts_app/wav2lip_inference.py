@@ -30,7 +30,7 @@ def create_video_from_image(image_path, audio_path, output_video, fps=25):
 
     video_writer.release()
     
-    print('Video created')
+    logger.info('Video created')
     return output_video
 
 
@@ -38,6 +38,7 @@ def generate_lip_sync_video(image_path, audio_path, output_video, unique_id=None
     """Generates a lip-sync video using Wav2Lip."""
     base_dir = settings.BASE_DIR
     
+    logger.info(f"Using Wav2Lip directory: {WAV2LIP_DIR}")
     if not unique_id:
         import uuid
         unique_id = str(uuid.uuid4()).split('-')[0]
