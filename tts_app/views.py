@@ -97,21 +97,42 @@ def get_language_name(locale_code):
 
 # @csrf_exempt
 def get_languages(request):
+    import asyncio
+    import edge_tts
+
+    logger.info("Starting get_languages")
+
+    async def get_voices():
+        try:
+            logger.info("Calling VoicesManager.create()")
+            manager = await edge_tts.VoicesManager.create()
+            logger.info("Successfully created VoicesManager")
+            return manager
+        except Exception as e:
+            logger.error("Async error during VoicesManager.create: %s", e, exc_info=True)
+            raise
+
     try:
-        import asyncio
-        logger.info("Fetching languages from edge_tts.VoicesManager")
-        logger.info("About to call VoicesManager.create()")
-        voices_manager = asyncio.run(edge_tts.VoicesManager.create())
-        logger.info("VoicesManager created successfully")
+        voices_manager = asyncio.run(asyncio.wait_for(get_voices(), timeout=10))
+        logger.info("Returned from asyncio.run")
+
         voices = voices_manager.voices
         logger.info(f"Found {len(voices)} voices")
+
         languages = sorted(set(v["Locale"] for v in voices))
         logger.info(f"Extracted {len(languages)} unique languages")
+
         language_data = [{"code": lang, "name": get_language_name(lang)} for lang in languages]
         logger.info("Language data prepared for response")
+
         return JsonResponse(language_data, safe=False)
+
+    except asyncio.TimeoutError:
+        logger.error("Timed out while fetching voices from edge_tts")
+        return JsonResponse({"error": "Timeout from edge_tts"}, status=504)
+
     except Exception as e:
-        logger.error("Error in get_languages: %s", e, exc_info=True)
+        logger.error("General error in get_languages: %s", e, exc_info=True)
         return JsonResponse({"error": "Internal Server Error"}, status=500)
 
 async def get_voices(request):
