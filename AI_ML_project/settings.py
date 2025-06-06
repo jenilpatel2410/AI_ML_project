@@ -178,5 +178,10 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'tts_app.wav2lip_inference': {  # Replace 'myapp' with your actual app name
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
