@@ -99,8 +99,8 @@ def get_language_name(locale_code):
 def get_languages(request):
     try:
         import asyncio
-        print("Starting get_languages")
         logger.info("Fetching languages from edge_tts.VoicesManager")
+        logger.info("About to call VoicesManager.create()")
         voices_manager = asyncio.run(edge_tts.VoicesManager.create())
         logger.info("VoicesManager created successfully")
         voices = voices_manager.voices
