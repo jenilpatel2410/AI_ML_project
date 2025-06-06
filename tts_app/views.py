@@ -190,6 +190,7 @@ def lip_sync_api(request):
     output_video_path = os.path.join(settings.MEDIA_ROOT, "videos", output_video_filename)
     os.makedirs(os.path.dirname(output_video_path), exist_ok=True)
 
+    logger.info(f"Generating lip-sync video with image: {image_path}, audio: {audio_path}, output: {output_video_path}")
     result = generate_lip_sync_video(image_path, audio_path, output_video_path, unique_id=image_unique_id)
 
     if result:
